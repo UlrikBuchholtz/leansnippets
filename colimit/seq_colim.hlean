@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn, Egbert Rijke
 -/
 import hit.quotient .sequence cubical.squareover types.arrow .move_to_lib types.equiv
+import types.eq
 
 open eq nat sigma sigma.ops quotient equiv equiv.ops pi is_trunc is_equiv fiber
 
@@ -24,14 +25,17 @@ namespace seq_colim
   quotient seq_rel
 
   parameters {A f}
---  variable (n)
-  -- do we want to make n explicit for ι, because 'ι a' is ambiguous for a : A n. It can be 'ι n a' or 'ι 0 a' in a shifted sequence
   definition inclusion : seq_colim :=
   class_of R ⟨n, a⟩
 
   abbreviation ι := @inclusion
 
---  variable {n}
+  definition ι_functor {n₁ n₂ : ℕ} {p : n₁ = n₂} {a₁ : A n₁} {a₂ : A n₂}
+    (q : a₁ =[p] a₂) : ι a₁ = ι a₂ :=
+  begin
+    apply (apo011 (λn a, ι a) p q)
+  end
+
   definition glue : ι (f a) = ι a :=
   eq_of_rel seq_rel (Rmk a)
 
@@ -286,6 +290,14 @@ namespace seq_colim
     rewrite [my.apo_invo,my.apo_tro]
   end) end
 
+  definition f_rep_equiv_rep_f_from (k : ℕ) (p : P (rep k (f a)))
+    : ((to_fun (f_rep_equiv_rep_f a P))⁻¹ (ι p))
+      = ι ((rep_f k a) ▸o p) :=
+  begin
+    unfold f_rep_equiv_rep_f,
+    rewrite [my.apo011_invo,inv_inv,my.cast_apo011]
+  end
+
   definition seq_colim_over [unfold 5] (x : seq_colim A) : Type.{v} :=
   begin
     fapply seq_colim.elim_type_on x,
@@ -309,16 +321,34 @@ namespace seq_colim
     exact !seq_colim_over_glue
   end
 
-  definition change_over_rep (k : ℕ) (p : P (rep k a)) : pathover (seq_colim_over P)
-    (@ι _ (seq_diagram_of_over P (rep k a)) 0 p) (rep_glue a k) (@ι _ _ k p) :=
+  definition change_over_gen (k : ℕ) (p : P (rep k (f a)))
+    : pathover (seq_colim_over P)
+      (@ι _ (seq_diagram_of_over P (f a)) k p) (glue a)
+      (@ι _ _ (succ k) (rep_f k a ▸o p)) :=
   begin
-    revert a p, induction k with k IH, all_goals intro a p,
-    { constructor},
-    { rewrite [↑seq_diagram_of_over,↑rep_glue,↓rep_glue a k],
-      exact sorry --refine _ ⬝o _,
-
-    }
+    apply pathover_of_tr_eq,
+    rewrite [seq_colim_over_glue a (ι p)],
+    rewrite [f_rep_equiv_rep_f_from a P k p],
   end
+
+  definition change_over_rep_gen (k : ℕ) (l : ℕ) (p : P (rep l (rep k a)))
+    : pathover (seq_colim_over P)
+      (@ι _ (seq_diagram_of_over P (rep k a)) l p) (rep_glue a k)
+      (@ι _ _ (k + l) (rep_rep k l a ▸o p)) :=
+  begin
+    induction k with k IH_k,
+    { apply pathover_idp_of_eq,
+      apply @ι_functor _ (seq_diagram_of_over P a) l (0 + l) (my.zero_add' l),
+      exact sorry
+    },
+    { exact sorry }
+  end
+
+  definition change_over_rep (k : ℕ) (p : P (rep k a))
+    : pathover (seq_colim_over P)
+      (@ι _ (seq_diagram_of_over P (rep k a)) 0 p)
+      (rep_glue a k) (@ι _ _ k p) :=
+  !change_over_rep_gen
 
   definition sigma_colim_of_colim_sigma (a : seq_colim (λn, Σ(x : A n), P x)) :
     Σ(x : seq_colim A), seq_colim_over P x :=
@@ -380,3 +410,4 @@ namespace seq_colim
   end over
 
 end seq_colim
+

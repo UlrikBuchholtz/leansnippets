@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn, Egbert Rijke
 -/
 
-import types.nat
+import types.nat .move_to_lib
 
-open nat eq equiv sigma sigma.ops
+open nat eq equiv sigma sigma.ops is_trunc
 
 namespace seq_colim
 
@@ -38,6 +38,24 @@ namespace seq_colim
   end
 
   definition f_rep (k : ℕ) (a : A n) : f (rep k a) = rep (succ k) a := idp
+
+  definition rep_rep (k l : ℕ) (a : A n) : rep l (rep k a) =[my.add.assoc n k l] rep (k + l) a :=
+  begin
+    induction l with l IH,
+    { constructor },
+    { apply pathover_ap, apply (apo f), apply IH }
+  end
+
+  definition rep_rep_zero (l : ℕ) (a : A n)
+    : rep_rep 0 l a =[is_hset.elim (my.add.assoc n 0 l)
+                                   (ap (add n) (my.zero_add' l))]
+      pathover_ap A (add n) (apdo (λk, rep k a) (my.zero_add' l)) :=
+  begin
+    induction l with l IH,
+    { krewrite [my.is_hset_elim_triv ℕ n], constructor },
+    { krewrite [my.apdo_ap succ (λk, rep k a) (my.zero_add' l)],
+      exact sorry }
+  end
 
   variable (A)
   definition shift_diag [instance] [unfold-full] : seq_diagram (λn, A (succ n)) :=
